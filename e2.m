@@ -3,7 +3,7 @@ clear
 clc
 
 % Carica il file dati del soggetto 7 task Baseline
-data=load('.\FilteredData_Subject_7_task_BL.mat');
+data=load('.\02_FilteredData\FilteredData_Subject_7_task_BL.mat');
 
 % Estrarre il segnale tra n=50 e N=2500
 n_start = 50;
@@ -27,7 +27,7 @@ yn = xn;
 yn(1:num_campioni_inizio) = 0;  % Imposta i primi campioni a 0
 yn(floor(num_campioni/2)+1 : floor(num_campioni/2) + num_campioni_meta) = 0;  % Imposta i campioni a metà a 0
 
-% Calcola il valore medio e l'energia del segnale yn
+% Calcola il valore medio e energia del segnale yn
 mean_value_yn = mean(yn);
 energy_yn = sum(yn.^2);
 
@@ -47,3 +47,4 @@ plot([1, n_end], [mean_value_yn, mean_value_yn], 'r--', 'LineWidth', 2);
 rectangle('Position', [500, -0.35, 1500, 0.1], 'EdgeColor', 'b', 'LineWidth', 0.5, 'FaceColor', 'w');
 text(1150, -0.3, ['Valore Medio: ' num2str(mean_value_yn)], 'FontSize', 9);
 text(550, -0.3, ['Energia: ' num2str(energy_yn) 'J'], 'FontSize', 9);
+legend('Segnale', 'Valore medio');
