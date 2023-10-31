@@ -46,15 +46,11 @@ disp(coeff_correlation);
 
 % Grafico della correlazione
 figure;
-plot(Ryz);
+plot(zn);
 hold on
-title('Correlazione tra Yn e Zn');
-xlabel('Lag');
-ylabel('Valore di Correlazione');
-
-rectangle('Position', [220, 20, 2750, 3], 'EdgeColor', 'r', 'LineWidth', 0.5, 'FaceColor', 'w');
-text(260, 21.5, ['Coefficiente di correlazione: ' num2str(coeff_correlation)] , 'FontSize', 10);
-
+title('Segnale Zn');
+xlabel('Tempo(n)');
+ylabel('Ampiezza');
 
 % Trova i picchi nel segnale zznn
 threshold = 0.5 * max(zn);  % Imposta una soglia per definire cosa costituisce un picco
