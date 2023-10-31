@@ -14,8 +14,8 @@ N_endz = 2500;
 n_starty = 50;
 N_endy = 2500;
 
-zn = dataz.ECG(n_startz:N_endz);
-yn = datay.ECG(n_starty:N_endy);
+zn = dataz.ECG(N_startz:N_endz);
+yn = datay.ECG(n_start:n_end);
 
 % Percentuali di campioni da eliminare
 percent_inizio = 0.03;  % 3% all'inizio
@@ -30,21 +30,21 @@ num_campioni_meta = round(percent_meta * num_campioni);
 yn(1:num_campioni_inizio) = 0;  % Imposta i primi campioni a 0
 yn(floor(num_campioni/2)+1 : floor(num_campioni/2) + num_campioni_meta) = 0;  % Imposta i campioni a metà a 0
 
-% Calcolo correlazione
-Ryz = xcorr(zn,yn);
-
-% Grafico della correlazione
+% Grafico del segnale zn
 figure;
-plot(Ryz);
-hold on 
-%plot(zn);
-%plot(yn);
-title('Correlazione tra Zn e Yn');
-xlabel('Lag');
-ylabel('Valore di Correlazione');
-%legend('Ryz', 'zn', 'yn');
+plot(zn);
+hold on;
+
+% Etichette degli assi e titolo
+xlabel('Tempo (n)');
+ylabel('Ampiezza');
+title('Grafico del Segnale xn');
+
 % Imposta limiti sull'asse delle x
-xlim([min(n_starty,n_startz), max(N_endz,N_endy)]);
+xlim([n, N]);
+
+Ryz = corr()
+
 
 
 % % Calcola il valore medio e energia del segnale yn
