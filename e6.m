@@ -1,7 +1,6 @@
 close all
 clear
 clc
- 
 
 % Carica il file dati del soggetto 6 task Baseline
 dataz = load('.\02_FilteredData\FilteredData_Subject_6_task_BL.mat');
