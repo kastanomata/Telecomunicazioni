@@ -4,7 +4,7 @@ clc
  
 
 % Carica il file dati del soggetto 7 task Baseline
-data=load('.\FilteredData_Subject_7_task_BL.mat');
+data=load('.\02_FilteredData\FilteredData_Subject_7_task_BL.mat');
 % Estrarre il segnale tra n=50 e N=2500
 n_start = 50;
 n_end = 2500;
