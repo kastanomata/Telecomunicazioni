@@ -27,8 +27,7 @@ num_campioni_meta = round(percent_meta * num_campioni);
 
 % Crea il segnale yn eliminando i campioni
 yn(1:num_campioni_inizio) = 0;  % Imposta i primi campioni a 0
-yn(floor(num_campioni/2)+1 : floor(num_campioni/2) + num_campioni_meta) = 0;  % Imposta i campioni a metà a 0
-
+yn(floor(num_campioni/2)-(num_campioni_meta/2) : floor(num_campioni/2) + (num_campioni_meta/2)) = 0;  % Imposta i campioni a metà a 0
 % Calcolo correlazione
 Ryz = xcorr(yn,zn);
 
@@ -45,12 +44,37 @@ disp(coeff_correlation);
 
 
 % Grafico della correlazione
-figure;
+% Disegna il primo segnale
+subplot(3, 1, 1);
 plot(Ryz);
-hold on
-title('Correlazione tra Yn e Zn');
-xlabel('Lag');
-ylabel('Valore di Correlazione');
-
+title('Correlazione');
+xlabel('Tempo');
+ylabel('Amplitude');
 rectangle('Position', [220, 20, 2750, 3], 'EdgeColor', 'r', 'LineWidth', 0.5, 'FaceColor', 'w');
 text(260, 21.5, ['Coefficiente di correlazione: ' num2str(coeff_correlation)] , 'FontSize', 10);
+
+
+% Disegna il secondo segnale
+subplot(3, 1, 2);
+plot(yn);
+title('Yn');
+xlabel('Tempo');
+ylabel('Amplitude');
+
+% Disegna il terzo segnale
+subplot(3, 1, 3);
+plot(zn);
+title('Zn');
+xlabel('Tempo');
+ylabel('Amplitude');
+
+
+% 
+% hold on
+% title('Correlazione tra Yn e Zn');
+% xlabel('Lag');
+% ylabel('Valore di Correlazione');
+% 
+% rectangle('Position', [220, 20, 2750, 3], 'EdgeColor', 'r', 'LineWidth', 0.5, 'FaceColor', 'w');
+% text(260, 21.5, ['Coefficiente di correlazione: ' num2str(coeff_correlation)] , 'FontSize', 10);
+

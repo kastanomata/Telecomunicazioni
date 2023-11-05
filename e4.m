@@ -9,8 +9,6 @@ data=load('.\02_FilteredData\FilteredData_Subject_7_task_BL.mat');
 n_start = 50;
 n_end = 2500;
 
-%disp(length(data));
-
 yn = data.ECG(n_start:n_end);
 
 % Percentuali di campioni da eliminare
@@ -24,7 +22,7 @@ num_campioni_meta = round(percent_meta * num_campioni);
 
 % Crea il segnale yn eliminando i campioni
 yn(1:num_campioni_inizio) = 0;  % Imposta i primi campioni a 0
-yn(floor(num_campioni/2)+1 : floor(num_campioni/2) + num_campioni_meta) = 0;  % Imposta i campioni a metà a 0
+yn(floor(num_campioni/2)-(num_campioni_meta/2) : floor(num_campioni/2) + (num_campioni_meta/2)) = 0;  % Imposta i campioni a metà a 0
 
 % Calcola il valore medio e energia del segnale yn
 mean_value_yn = mean(yn);

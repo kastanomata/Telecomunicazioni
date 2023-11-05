@@ -27,7 +27,7 @@ num_campioni_meta = round(percent_meta * num_campioni);
 
 % Crea il segnale yn eliminando i campioni
 yn(1:num_campioni_inizio) = 0;  % Imposta i primi campioni a 0
-yn(floor(num_campioni/2)+1 : floor(num_campioni/2) + num_campioni_meta) = 0;  % Imposta i campioni a metà a 0
+yn(floor(num_campioni/2)-(num_campioni_meta/2) : floor(num_campioni/2) + (num_campioni_meta/2)) = 0;  % Imposta i campioni a metà a 0
 
 % Calcolo correlazione
 Ryz = xcorr(yn,zn);
@@ -52,7 +52,7 @@ title('Segnale Zn');
 xlabel('Tempo(n)');
 ylabel('Ampiezza');
 
-% Trova i picchi nel segnale zznn
+%Trova i picchi nel segnale zn
 threshold = 0.5 * max(zn);  % Imposta una soglia per definire cosa costituisce un picco
 picchi = [];
 picco_in_corso = false;
