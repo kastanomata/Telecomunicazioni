@@ -34,7 +34,7 @@ Ryz = xcorr(yn,zn);
 % Calcola la lunghezza minima tra Yn e Zn
 min_length = min(length(yn), length(zn));
 
-% Calcola il coefficiente di correlazione tra le porzioni sovrapposte di zznn e RRyyyy
+% Calcola il coefficiente di correlazione tra le porzioni sovrapposte di zn e Ryz
 matrix_correlation = corrcoef(yn(1:min_length),zn(1:min_length));
 
 coeff_correlation = matrix_correlation(1, 2);
