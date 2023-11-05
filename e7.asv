@@ -52,7 +52,7 @@ title('Segnale Zn');
 xlabel('Tempo(n)');
 ylabel('Ampiezza');
 
-% Esercizio 7: stampa la distanza fra il terzo e il quarto picco
+% Esercizio 7: stampa la distanza fra il terzo e il qua
 threshold = 0.5 * max(zn);  % Imposta una soglia per definire cosa costituisce un picco
 picchi = []; % Vettore contenente gli indici dei picchi
 picco_in_corso = false;
