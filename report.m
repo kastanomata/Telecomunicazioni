@@ -69,6 +69,35 @@ matrix_correlation = corrcoef(yn(1:min_length),zn(1:min_length));
 % Estrarre dalla matrice il coefficiente
 coeff_correlation = matrix_correlation(1, 2);
 
+% Esercizio 7
+%Trova i picchi nel segnale zn
+threshold = 0.5 * max(zn);  % Imposta una soglia per definire cosa costituisce un picco
+picchi = [];
+picco_in_corso = false;
+
+for i = 1:length(zn)
+    if zn(i) > threshold
+        if ~picco_in_corso
+            picco_in_corso = true;
+            picchi = [picchi, i];
+        end
+    else
+        picco_in_corso = false;
+    end
+end
+
+% Verifica che ci siano almeno quattro picchi
+if length(picchi) >= 4
+    % Calcola la distanza tra il terzo e il quarto picco
+    terzo_picco = picchi(3);
+    quarto_picco = picchi(4);
+    distanza_terzo_quarto_picco = quarto_picco - terzo_picco;
+    
+    % Stampa la distanza
+    fprintf('Distanza tra il terzo e il quarto picco: %d campioni\n', distanza_terzo_quarto_picco);
+else
+    fprintf('Non ci sono abbastanza picchi nel segnale per calcolare la distanza.\n');
+end
 
 
 
