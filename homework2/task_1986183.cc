@@ -1,5 +1,3 @@
-#include <stdlib.h>
-#include <cstring>
 #include "ns3/applications-module.h"
 #include "ns3/core-module.h"
 #include "ns3/csma-module.h"
@@ -9,6 +7,9 @@
 #include "ns3/point-to-point-module.h"
 #include "ns3/ssid.h"
 #include "ns3/yans-wifi-helper.h"
+
+#include <stdlib.h>
+#include <cstring>
 
 // Network Topology
 
@@ -71,11 +72,19 @@ int main(int argc, char* argv[]){
     nodes.Create(20); // Creo tutti i miei nodi 
 
     // Aggiungo i nodi collegati con CSMA nell mio Container specifico , mi aiuto con gli indici
+    /*
+    for(int i = 0; i < 2; i++)
+        csmaNodes.Add(nodes.Get(i));
+    */
     csmaNodes.Add(nodes.Get(0));
     csmaNodes.Add(nodes.Get(1));
     csmaNodes.Add(nodes.Get(2));
 
     // Aggiungo i nodi collegati in P2P nel mio Container specifico , mi aiuto con gli indici
+    /*
+    for(int i = 2; i < 11; i++)
+        p2pNodes.Add(nodes.Get(i));
+    */
     p2pNodes.Add(nodes.Get(2));
     p2pNodes.Add(nodes.Get(3));
     p2pNodes.Add(nodes.Get(4));
@@ -87,6 +96,10 @@ int main(int argc, char* argv[]){
     p2pNodes.Add(nodes.Get(10));
 
     // Aggiungo i nodi collegati in Wifi nel mio Container specifico , mi aiuto con gli indici
+    /*
+    for(int i = 10; i < 20; i++)
+        p2pNodes.Add(nodes.Get(i));
+    */
     wifiNodes.Add(nodes.Get(10));
     wifiNodes.Add(nodes.Get(11));
     wifiNodes.Add(nodes.Get(12));
@@ -110,8 +123,8 @@ int main(int argc, char* argv[]){
 
     //Creo 3 per helper per i nodi P2P
     PointToPointHelper pointToPoint5;
-    pointToPoint5.SetDeviceAttribute("DataRate", StringValue("5Mbps"));
-    pointToPoint5.SetChannelAttribute("Delay", StringValue("20ms"));
+    pointToPoint5.SetDeviceAttribute("DataRate", StringValue("5Mbps")); 
+    pointToPoint5.SetChannelAttribute("Delay", StringValue("20ms")); 
 
     PointToPointHelper pointToPoint100;
     pointToPoint100.SetDeviceAttribute("DataRate", StringValue("100Mbps"));
@@ -121,14 +134,41 @@ int main(int argc, char* argv[]){
     pointToPoint10.SetDeviceAttribute("DataRate", StringValue("10Mbps"));
     pointToPoint10.SetChannelAttribute("Delay", StringValue("200ms"));
 
-    //TODO Antonio :
-        //Creo un helper per nodi Wifi
+    // TODO Antonio :
+        // Creo un helper per nodi Wifi
+    NodeContainer wifiApNode = p2pNodes.Get(10);
 
+    YansWifiChannelHelper channel = YansWifiChannelHelper::Default();
+    YansWifiPhyHelper phy;
+    phy.SetChannel(channel.Create());
 
+    WifiMacHelper mac;
+    Ssid ssid = Ssid("1986183");
 
+    WifiHelper wifi;
 
+    NetDeviceContainer apDevices;
+    mac.SetType("ns3::ApWifiMac", "Ssid", SsidValue(ssid));
+    apDevices = wifi.Install(phy, mac, wifiApNode);
 
-    //
+    MobilityHelper mobility;
+
+    mobility.SetPositionAllocator("ns3::GridPositionAllocator",
+                                  "MinX",
+                                  DoubleValue(0.0),
+                                  "MinY",
+                                  DoubleValue(0.0),
+                                  "DeltaX",
+                                  DoubleValue(5.0),
+                                  "DeltaY",
+                                  DoubleValue(10.0),
+                                  "GridWidth",
+                                  UintegerValue(3),
+                                  "LayoutType",
+                                  StringValue("RowFirst"));
+
+    mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+    mobility.Install(wifiNodes);
 
     // Creo la netdevice per i CSMA
     NetDeviceContainer devices_0_2 = csma1.Install(nodes.Get(0));
@@ -136,14 +176,13 @@ int main(int argc, char* argv[]){
     NetDeviceContainer devices_1_2 = csma2.Install(nodes.Get(1));
     NetDeviceContainer devices_2_1 = csma2.Install(nodes.Get(2));
 
-
-    //Creo i netdevices per i P2P
+    // Creo i netdevices per i P2P DataRate = 100Mbps Delay = 20ms
     NetDeviceContainer devices_2_4 = pointToPoint100.Install(nodes.Get(2) , nodes.Get(4));
     NetDeviceContainer devices_4_5 = pointToPoint100.Install(nodes.Get(4) , nodes.Get(5));
     NetDeviceContainer devices_4_10 = pointToPoint100.Install(nodes.Get(4) , nodes.Get(10));
-    //
+    // DataRate = 10Mbps Delay = 200ms
     NetDeviceContainer devices_4_3 = pointToPoint10.Install(nodes.Get(4) , nodes.Get(3));
-    //
+    // DataRate = 5Mbps Delay = 20ms
     NetDeviceContainer devices_5_7 = pointToPoint5.Install(nodes.Get(5) , nodes.Get(7));
     NetDeviceContainer devices_5_6 = pointToPoint5.Install(nodes.Get(5) , nodes.Get(6));
     NetDeviceContainer devices_6_8 = pointToPoint5.Install(nodes.Get(6) , nodes.Get(8));
