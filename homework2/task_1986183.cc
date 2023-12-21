@@ -37,7 +37,7 @@ void createAllNodes(NodeContainer *nodes, NodeContainer *p2pNodes, NodeContainer
 int main(int argc, char* argv[]) {
     checkArgs(argc, argv); 
 
-    //Come scelta progettuale abbiamo deciso di creare:
+    // Come scelta progettuale abbiamo deciso di creare:
     NodeContainer nodes;        // un Container generale per una gestione migliore degli indici [0-19];
     NodeContainer p2pNodes;     // un Container per nodi collegati da topologie P2P;
     NodeContainer wifiNodes;    // un Container per i nodi collegati via topologia Wi-fi;
@@ -45,74 +45,43 @@ int main(int argc, char* argv[]) {
 
     createAllNodes(&nodes, &p2pNodes, &wifiNodes, &csmaNodes);
 
-    //Creo un helper  per i  nodi CSMA
+    // Creo un helper  per i  nodi CSMA
     CsmaHelper csma;
     csma.SetChannelAttribute("DataRate", StringValue("10Mbps"));
     csma.SetChannelAttribute("Delay", StringValue("200ms"));
-
-    //Creo 3 per helper per i nodi P2P
-    PointToPointHelper pointToPoint5;
-    pointToPoint5.SetDeviceAttribute("DataRate", StringValue("5Mbps")); 
-    pointToPoint5.SetChannelAttribute("Delay", StringValue("20ms")); 
-
-    PointToPointHelper pointToPoint100;
-    pointToPoint100.SetDeviceAttribute("DataRate", StringValue("100Mbps"));
-    pointToPoint100.SetChannelAttribute("Delay", StringValue("20ms"));
-
-    PointToPointHelper pointToPoint10;
-    pointToPoint10.SetDeviceAttribute("DataRate", StringValue("10Mbps"));
-    pointToPoint10.SetChannelAttribute("Delay", StringValue("200ms"));
-
-    NodeContainer wifiApNode = p2pNodes.Get(10);
-
-    YansWifiChannelHelper channel = YansWifiChannelHelper::Default();
-    YansWifiPhyHelper phy;
-    phy.SetChannel(channel.Create());
-
-    WifiMacHelper mac;
-    Ssid ssid = Ssid("1986183");
-
-    WifiHelper wifi;
-
-    NetDeviceContainer apDevices;
-    mac.SetType("ns3::ApWifiMac", "Ssid", SsidValue(ssid));
-    apDevices = wifi.Install(phy, mac, wifiApNode);
-
-    MobilityHelper mobility;
-
-    mobility.SetPositionAllocator("ns3::GridPositionAllocator",
-                                  "MinX",
-                                  DoubleValue(0.0),
-                                  "MinY",
-                                  DoubleValue(0.0),
-                                  "DeltaX",
-                                  DoubleValue(5.0),
-                                  "DeltaY",
-                                  DoubleValue(10.0),
-                                  "GridWidth",
-                                  UintegerValue(3),
-                                  "LayoutType",
-                                  StringValue("RowFirst"));
-
-    mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-    mobility.Install(wifiNodes);
-
     // Creo la netdevice per i CSMA
     NetDeviceContainer devices_0 = csma.Install(nodes.Get(0));
     NetDeviceContainer devices_1 = csma.Install(nodes.Get(1));
     NetDeviceContainer devices_2 = csma.Install(nodes.Get(2));
 
-    // Creo i netdevices per i P2P DataRate = 100Mbps Delay = 20ms
-    NetDeviceContainer devices_2_4 = pointToPoint100.Install(nodes.Get(2), nodes.Get(4));
-    NetDeviceContainer devices_4_5 = pointToPoint100.Install(nodes.Get(4), nodes.Get(5));
-    NetDeviceContainer devices_4_10 = pointToPoint100.Install(nodes.Get(4), nodes.Get(10));
+    // Creo 3 per helper per i nodi P2P
+    // DataRate = 5Mbps Delay = 20ms
+    PointToPointHelper pointToPoint5;
+    pointToPoint5.SetDeviceAttribute("DataRate", StringValue("5Mbps")); 
+    pointToPoint5.SetChannelAttribute("Delay", StringValue("20ms")); 
+    // DataRate = 100Mbps Delay = 20ms
+    PointToPointHelper pointToPoint100;
+    pointToPoint100.SetDeviceAttribute("DataRate", StringValue("100Mbps"));
+    pointToPoint100.SetChannelAttribute("Delay", StringValue("20ms"));
     // DataRate = 10Mbps Delay = 200ms
-    NetDeviceContainer devices_4_3 = pointToPoint10.Install(nodes.Get(4), nodes.Get(3));
+    PointToPointHelper pointToPoint10;
+    pointToPoint10.SetDeviceAttribute("DataRate", StringValue("10Mbps"));
+    pointToPoint10.SetChannelAttribute("Delay", StringValue("200ms"));
+
+    // Creo i netdevices per i P2P 
     // DataRate = 5Mbps Delay = 20ms
     NetDeviceContainer devices_5_7 = pointToPoint5.Install(nodes.Get(5), nodes.Get(7));
     NetDeviceContainer devices_5_6 = pointToPoint5.Install(nodes.Get(5), nodes.Get(6));
     NetDeviceContainer devices_6_8 = pointToPoint5.Install(nodes.Get(6), nodes.Get(8));
     NetDeviceContainer devices_6_9 = pointToPoint5.Install(nodes.Get(6), nodes.Get(9));
+    // DataRate = 100Mbps Delay = 20ms
+    NetDeviceContainer devices_2_4 = pointToPoint100.Install(nodes.Get(2), nodes.Get(4));
+    NetDeviceContainer devices_4_5 = pointToPoint100.Install(nodes.Get(4), nodes.Get(5));
+    NetDeviceContainer devices_4_10 = pointToPoint100.Install(nodes.Get(4), nodes.Get(10));
+    // DataRate = 10Mbps Delay = 200ms
+    NetDeviceContainer devices_4_3 = pointToPoint10.Install(nodes.Get(4), nodes.Get(3));
+
+    // WIFI
 
     Simulator::Run();
     Simulator::Destroy();
@@ -127,7 +96,7 @@ void checkArgs(int argc, char * argv[]) {
     std::string matricolaInserita = "";
     CommandLine cmd;
     cmd.AddValue("matricola-referente", "Matricola del referente del Gruppo 25", matricolaInserita);
-    cmd.AddValue("verbose", "Tell echo applications to log if true", verbose);
+    cmd.AddValue("verbose", "Set log level a LOG_LEVEL_INFO", verbose);
     cmd.AddValue("enable-tracing", "Abilitare il tracing promiscuo dei pacchetti", tracing);
     cmd.AddValue("force-rts-cts", "Forzare l'uso di protocollo RTS/CTS", enableRtsCts);
     cmd.Parse (argc, argv); 
@@ -145,7 +114,12 @@ void checkArgs(int argc, char * argv[]) {
         LogComponentEnable("UdpEchoServerApplication", LOG_LEVEL_INFO);
         return;
     } 
-    if(enableRtsCts) std::cout << RTS_CTS_OK;
+    if(enableRtsCts) {
+        std::cout << RTS_CTS_OK;
+        Config::SetDefault("ns3::WifiRemoteStationManager::RtsCtsThreshold",UintegerValue(1));
+    } else {
+        Config::SetDefault("ns3::WifiRemoteStationManager::RtsCtsThreshold",UintegerValue(100));
+    }
     if(tracing) std::cout << TRACING_OK;  
      
 }
