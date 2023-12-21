@@ -113,16 +113,82 @@ int main(int argc, char* argv[]) {
     InternetStackHelper stack;
     stack.Install(nodes);
 
+    NetDeviceContainer p2pDevicesMacro;
+    p2pDevicesMacro.Add(devices_5_6);
+    p2pDevicesMacro.Add(devices_6_8);
+    p2pDevicesMacro.Add(devices_6_9);
+
     Ipv4AddressHelper address;
     address.SetBase("10.1.1.0", "255.255.255.248"); // TODO: check IP addresses
     Ipv4InterfaceContainer csmaInterfaces;
     csmaInterfaces = address.Assign(csmaDevices);
-    address.SetBase("10.1.1.0", "255.255.255.248"); // TODO: check IP addresses
+
+    address.SetBase("10.1.2.0", "255.255.255.240"); // TODO: check IP addresses
     Ipv4InterfaceContainer wifiInterfaces;
     wifiInterfaces = address.Assign(adhocDevices);
-    
 
-    // abilitare tracing per nodi router (2, 4, 5, 10)
+    address.SetBase("10.1.3.0", "255.255.255.248"); // TODO: check IP addresses
+    Ipv4InterfaceContainer p2pInterfacesMacro;
+    p2pInterfacesMacro = address.Assign(p2pDevicesMacro);
+
+    address.SetBase("10.1.4.0", "255.255.255.252"); // TODO: check IP addresses
+    Ipv4InterfaceContainer p2pInterface_5_7;
+    p2pInterface_5_7 = address.Assign(devices_5_7);
+
+    address.SetBase("10.1.4.0", "255.255.255.252", "0.0.0.3"); // TODO: check IP addresses
+    Ipv4InterfaceContainer p2pInterface_4_5;
+    p2pInterface_4_5 = address.Assign(devices_4_5);
+
+    address.SetBase("10.1.4.0", "255.255.255.252", "0.0.0.5"); // TODO: check IP addresses
+    Ipv4InterfaceContainer p2pInterface_2_4;
+    p2pInterface_2_4 = address.Assign(devices_2_4);
+
+    address.SetBase("10.1.4.0", "255.255.255.252", "0.0.0.7"); // TODO: check IP addresses
+    Ipv4InterfaceContainer p2pInterface_4_3;
+    p2pInterface_4_3 = address.Assign(devices_4_3);
+
+    address.SetBase("10.1.4.0", "255.255.255.252", "0.0.0.10"); // TODO: check IP addresses
+    Ipv4InterfaceContainer p2pInterface_4_10;
+    p2pInterface_4_10 = address.Assign(devices_4_10);
+
+    //Manca invio pacchetti TCP
+
+    // UDP Echo application with Client 7 and Server 3
+    UdpEchoServerHelper echoServer(9);
+
+    ApplicationContainer serverApps = echoServer.Install(nodes.Get(3));
+    serverApps.Start(Seconds(1.0));
+    serverApps.Stop(Seconds(15.0));
+
+    UdpEchoClientHelper echoClient(p2pInterface_5_7.GetAddress(1), 9);
+    echoClient.SetAttribute("MaxPackets", UintegerValue(250)); // MaxPackets: 250
+    echoClient.SetAttribute("Interval", TimeValue(MilliSeconds(20.0))); // Bytes Periodicity:20ms
+    echoClient.SetAttribute("PacketSize", UintegerValue(2032)); //Size of packet: 2032
+
+    ApplicationContainer clientApps = echoClient.Install(nodes.Get(7));
+    clientApps.Start(Seconds(2.0));
+    clientApps.Stop(Seconds(15.0));
+
+    // Aggiungere matricole
+    echoClient.SetFill(clientApps.Get(0), "Antonio, Turco, 1986183, Alfredo, Segala, 1999676, Aldo Vitti, , Alessandro, Temperini, , Davide, Scolamiero, ");
+
+    Ipv4GlobalRoutingHelper::PopulateRoutingTables();
+
+    // Abilitare tracing per nodi router (2, 4, 5, 10)
+    if (tracing == true){
+        phy.SetPcapDataLinkType(WifiPhyHelper::DLT_IEEE802_11_RADIO);
+        phy.EnablePcap("Router_10", adhocDevices.Get(0), true);
+        pointToPoint100.EnablePcap("Router_2", devices_2_4.Get(0), true);
+        pointToPoint100.EnablePcap("Router_4", devices_2_4.Get(1), true);
+        pointToPoint100.EnablePcap("Router_5", devices_4_5.Get(1), true);
+    } else {
+        phy.SetPcapDataLinkType(WifiPhyHelper::DLT_IEEE802_11_RADIO);
+        phy.EnablePcapAll("Wi_Fi");
+        pointToPoint100.EnablePcapAll("P2P_100");
+        pointToPoint10.EnablePcapAll("P2P_10");
+        pointToPoint5.EnablePcapAll("P2P_5");
+        csma.EnablePcapAll("CSMA");
+    }
 
     Simulator::Run();
     Simulator::Stop(Seconds(15));
