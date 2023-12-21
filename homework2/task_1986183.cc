@@ -38,33 +38,28 @@ int main(int argc, char* argv[]) {
     checkArgs(argc, argv); 
 
     // Come scelta progettuale abbiamo deciso di creare:
-    NodeContainer nodes;        // un Container generale per una gestione migliore degli indici [0-19];
-    NodeContainer p2pNodes;     // un Container per nodi collegati da topologie P2P;
-    NodeContainer wifiNodes;    // un Container per i nodi collegati via topologia Wi-fi;
-    NodeContainer csmaNodes;    // un Container per i nodi collegati con protocollo CSMA.
+    NodeContainer nodes;            // un Container generale per una gestione migliore degli indici [0-19];
+    NodeContainer p2pNodes;         // un Container per nodi collegati da topologie P2P;
+    NodeContainer wifiStaNodes;     // un Container per i nodi collegati via topologia Wi-fi;
+    NodeContainer csmaNodes;        // un Container per i nodi collegati con protocollo CSMA.
 
-    createAllNodes(&nodes, &p2pNodes, &wifiNodes, &csmaNodes);
+    createAllNodes(&nodes, &p2pNodes, &wifiStaNodes, &csmaNodes);
 
     // Creo un helper  per i  nodi CSMA
-    CsmaHelper csma;
+    CsmaHelper csma; // DataRate = 10Mbps Delay = 200ms
     csma.SetChannelAttribute("DataRate", StringValue("10Mbps"));
     csma.SetChannelAttribute("Delay", StringValue("200ms"));
     // Creo la netdevice per i CSMA
-    NetDeviceContainer devices_0 = csma.Install(nodes.Get(0));
-    NetDeviceContainer devices_1 = csma.Install(nodes.Get(1));
-    NetDeviceContainer devices_2 = csma.Install(nodes.Get(2));
+    NetDeviceContainer csmaDevices = csma.Install(csmaNodes);
 
     // Creo 3 per helper per i nodi P2P
-    // DataRate = 5Mbps Delay = 20ms
-    PointToPointHelper pointToPoint5;
+    PointToPointHelper pointToPoint5;       // DataRate = 5Mbps Delay = 20ms
     pointToPoint5.SetDeviceAttribute("DataRate", StringValue("5Mbps")); 
     pointToPoint5.SetChannelAttribute("Delay", StringValue("20ms")); 
-    // DataRate = 100Mbps Delay = 20ms
-    PointToPointHelper pointToPoint100;
+    PointToPointHelper pointToPoint100;     // DataRate = 100Mbps Delay = 20ms
     pointToPoint100.SetDeviceAttribute("DataRate", StringValue("100Mbps"));
     pointToPoint100.SetChannelAttribute("Delay", StringValue("20ms"));
-    // DataRate = 10Mbps Delay = 200ms
-    PointToPointHelper pointToPoint10;
+    PointToPointHelper pointToPoint10;      // DataRate = 10Mbps Delay = 200ms
     pointToPoint10.SetDeviceAttribute("DataRate", StringValue("10Mbps"));
     pointToPoint10.SetChannelAttribute("Delay", StringValue("200ms"));
 
@@ -81,9 +76,56 @@ int main(int argc, char* argv[]) {
     // DataRate = 10Mbps Delay = 200ms
     NetDeviceContainer devices_4_3 = pointToPoint10.Install(nodes.Get(4), nodes.Get(3));
 
-    // WIFI
+    // WifI
+    YansWifiChannelHelper channel = YansWifiChannelHelper::Default();
+    YansWifiPhyHelper phy;
+    phy.SetChannel(channel.Create());
+    
+    WifiHelper wifi;
+    wifi.SetStandard (WIFI_STANDARD_80211g);
+    wifi.SetRemoteStationManager("ns3::AarfWifiManager");
+
+    WifiMacHelper mac;
+    NetDeviceContainer adhocDevices;
+    mac.SetType("ns3::AdhocWifiMac");
+    adhocDevices = wifi.Install(phy, mac, wifiStaNodes);
+
+    // Mobility
+    MobilityHelper mobility;
+    mobility.SetPositionAllocator("ns3::GridPositionAllocator",
+                                  "MinX",
+                                  DoubleValue(10.0),
+                                  "MinY",
+                                  DoubleValue(10.0),
+                                  "DeltaX",
+                                  DoubleValue(5.0),
+                                  "DeltaY",
+                                  DoubleValue(2.0),
+                                  "GridWidth",
+                                  UintegerValue(5),
+                                  "LayoutType",
+                                  StringValue("RowFirst"));
+    mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+    mobility.Install(wifiStaNodes);
+
+    exit(EXIT_SUCCESS); // FINO A QUI FUNZIONA, DA SOTTO È DA RIVEDERE
+
+    InternetStackHelper stack;
+    stack.Install(nodes);
+
+    Ipv4AddressHelper address;
+    address.SetBase("10.1.1.0", "255.255.255.248"); // TODO: check IP addresses
+    Ipv4InterfaceContainer csmaInterfaces;
+    csmaInterfaces = address.Assign(csmaDevices);
+    address.SetBase("10.1.1.0", "255.255.255.248"); // TODO: check IP addresses
+    Ipv4InterfaceContainer wifiInterfaces;
+    wifiInterfaces = address.Assign(adhocDevices);
+    
+
+    // abilitare tracing per nodi router (2, 4, 5, 10)
 
     Simulator::Run();
+    Simulator::Stop(Seconds(15));
     Simulator::Destroy();
     return 0;
 }
