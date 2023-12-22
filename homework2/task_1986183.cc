@@ -108,8 +108,6 @@ int main(int argc, char* argv[]) {
     mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     mobility.Install(wifiStaNodes);
 
-    exit(EXIT_SUCCESS); // FINO A QUI FUNZIONA, DA SOTTO È DA RIVEDERE
-
     InternetStackHelper stack;
     stack.Install(nodes);
 
@@ -135,19 +133,19 @@ int main(int argc, char* argv[]) {
     Ipv4InterfaceContainer p2pInterface_5_7;
     p2pInterface_5_7 = address.Assign(devices_5_7);
 
-    address.SetBase("10.1.4.0", "255.255.255.252", "0.0.0.3"); // TODO: check IP addresses
+    address.SetBase("10.1.5.0", "255.255.255.252"); // TODO: check IP addresses
     Ipv4InterfaceContainer p2pInterface_4_5;
     p2pInterface_4_5 = address.Assign(devices_4_5);
 
-    address.SetBase("10.1.4.0", "255.255.255.252", "0.0.0.5"); // TODO: check IP addresses
+    address.SetBase("10.1.6.0", "255.255.255.252"); // TODO: check IP addresses
     Ipv4InterfaceContainer p2pInterface_2_4;
     p2pInterface_2_4 = address.Assign(devices_2_4);
 
-    address.SetBase("10.1.4.0", "255.255.255.252", "0.0.0.7"); // TODO: check IP addresses
+    address.SetBase("10.1.7.0", "255.255.255.252"); // TODO: check IP addresses
     Ipv4InterfaceContainer p2pInterface_4_3;
     p2pInterface_4_3 = address.Assign(devices_4_3);
 
-    address.SetBase("10.1.4.0", "255.255.255.252", "0.0.0.10"); // TODO: check IP addresses
+    address.SetBase("10.1.8.0", "255.255.255.252"); // TODO: check IP addresses
     Ipv4InterfaceContainer p2pInterface_4_10;
     p2pInterface_4_10 = address.Assign(devices_4_10);
 
@@ -169,7 +167,6 @@ int main(int argc, char* argv[]) {
     clientApps.Start(Seconds(2.0));
     clientApps.Stop(Seconds(15.0));
 
-    // Aggiungere matricole
     echoClient.SetFill(clientApps.Get(0), "Antonio, Turco, 1986183, Alfredo, Segala, 1999676, Aldo Vitti, , Alessandro, Temperini, , Davide, Scolamiero, ");
 
     Ipv4GlobalRoutingHelper::PopulateRoutingTables();
