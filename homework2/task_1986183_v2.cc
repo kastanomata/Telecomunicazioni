@@ -157,7 +157,29 @@ int main(int argc, char* argv[]) {
 
     echoClient.SetFill(clientApps.Get(0), "Hello World");
     
-    //TODO: TCP
+    // TODO: TCP
+    // TCP delivery of a file of 1173 MB starting at 0.27 s
+    // Sender: Node 17 Receiver: Server 0
+    uint16_t receiverPort = 50000; // porta a caso
+    Address hubLocalAddress(InetSocketAddress(Ipv4Address::GetAny(), receiverPort)); 
+    PacketSinkHelper packetSinkHelper("ns3::TcpSocketFactory", hubLocalAddress);
+    ApplicationContainer receiver = packetSinkHelper.Install(nodes.Get(0)); // installo il packetSink sul nodo destinatario
+    receiver.Start(Seconds(2.0));
+    receiver.Stop(Seconds(15.0));
+
+    OnOffHelper onOffHelper("ns3::TcpSocketFactory", Address()); // un indirizzo a caso, tanto l'onOff non deve ricevere nulla
+    onOffHelper.SetAttribute("OnTime", StringValue("ns3::ConstantRandomVariable[Constant=0.27]")); // da quando inizia a trasmettere i dati l'OnOff, da rivedere
+    //onOffHelper.SetAttribute("OffTime", StringValue("ns3::ConstantRandomVariable[Constant=0]")); // da quando smette di trasmettere i dati l'OnOff, da rivedere
+
+    uint16_t senderPort = 50000; // porta a caso pt2 il ritorno
+    ApplicationContainer sender;
+    AddressValue remoteAddress(InetSocketAddress(csmaInterfaces.GetAddress(0), senderPort)); // indirizzo del nodo 0, si trova nelle CSMA interfaces
+    onOffHelper.SetAttribute("Remote", remoteAddress); // assegna l'indirizzo del server all'Helper in modo che i pacchetti siano inviati al giusto destinatario
+    //onOffHelper.SetAttribute("PacketSize", UintegerValue(1024)); // size del singolo frammento (forse MSS?)
+    onOffHelper.SetAttribute("MaxBytes", UintegerValue(1173*1000)); // quantità di dati da trasmettere
+    sender.Add(onOffHelper.Install(nodes.Get(17))); // installo l'OnOff sul nodo mittente
+    sender.Start(Seconds(1.0));
+    sender.Stop(Seconds(15.0));
     
     Ipv4GlobalRoutingHelper::PopulateRoutingTables();
 
@@ -216,8 +238,10 @@ void checkArgs(int argc, char * argv[]) {
         std::cout << RIGHT_MATRICOLA;
     }
     if(verbose) {
-        LogComponentEnable("UdpEchoClientApplication", LOG_LEVEL_INFO);
-        LogComponentEnable("UdpEchoServerApplication", LOG_LEVEL_INFO);
+        // LogComponentEnable("UdpEchoClientApplication", LOG_LEVEL_INFO);
+        // LogComponentEnable("UdpEchoServerApplication", LOG_LEVEL_INFO);
+        LogComponentEnable("PacketSink", LOG_LEVEL_INFO);
+        LogComponentEnable("OnOffApplication", LOG_LEVEL_INFO);
     } 
     if(enableRtsCts) {
         std::cout << RTS_CTS_OK;
