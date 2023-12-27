@@ -26,14 +26,16 @@ bool enableRtsCts = false;
 bool tracing = false;
 bool verbose = true;
 
-
 NS_LOG_COMPONENT_DEFINE("Task_1986183");
 
 // Controlla gli argomenti passati alla simulazione e setta le flag correttamente
 void checkArgs(int argc, char * argv[]);
 
 // Popola i NodeContainers con i nodi appropriati secondo le indicazioni progettuali, seguendo le indicazioni dell'immagine
-void createAllNodes(NodeContainer *nodes, NodeContainer *p2pNodes, NodeContainer *wifiNodes, NodeContainer *csmaNodes);
+void initializeNodes(NodeContainer *nodes, NodeContainer *p2pNodes, NodeContainer *wifiNodes, NodeContainer *csmaNodes);
+
+// Installa i netDevices sui nodi appropriati con topologia P2P
+void installP2PNetDevices(NodeContainer *nodes, NetDeviceContainer P2PDevices[], uint16_t nP2PDevices, PointToPointHelper pointToPoint);
 
 // Stampa informazioni per ogni Node (a quali topologie sia collegato)
 void printAllNodes(NodeContainer nodes, NodeContainer p2pNodes, NodeContainer wifiNodes, NodeContainer csmaNodes);
@@ -53,7 +55,7 @@ int main(int argc, char* argv[]) {
     NodeContainer wifiStaNodes;     // un Container per i nodi collegati via topologia Wi-fi;
     NodeContainer csmaNodes;        // un Container per i nodi collegati con protocollo CSMA.
 
-    createAllNodes(&nodes, &p2pNodes, &wifiStaNodes, &csmaNodes); 
+    initializeNodes(&nodes, &p2pNodes, &wifiStaNodes, &csmaNodes); 
     if(verbose) printAllNodes(nodes, p2pNodes, wifiStaNodes, csmaNodes);
 
     // Creo un helper  per i  nodi CSMA
@@ -67,23 +69,8 @@ int main(int argc, char* argv[]) {
     uint16_t nP2PDevices = 8; // abbiamo un numero di collegamenti p2p uguale a 8
     NetDeviceContainer P2PDevices[nP2PDevices]; // creo un array piuttosto che singoli NetDeviceContainer, comodo per passare a funzioni e fare loop 
     PointToPointHelper pointToPoint; // alla fine ho preferito usare un solo PointToPointHelper perché rende più facile settare il tracing
-    // DataRate = 5Mbps Delay = 20ms
-    pointToPoint.SetDeviceAttribute("DataRate", StringValue("5Mbps")); 
-    pointToPoint.SetChannelAttribute("Delay", StringValue("20ms")); 
-    P2PDevices[0] = pointToPoint.Install(nodes.Get(5), nodes.Get(6)); // NetDevice P2P_0 contains 2 elements-----> Node 5  Node 6
-    P2PDevices[1] = pointToPoint.Install(nodes.Get(5), nodes.Get(7)); // NetDevice P2P_1 contains 2 elements-----> Node 5  Node 7
-    P2PDevices[2] = pointToPoint.Install(nodes.Get(6), nodes.Get(8)); // NetDevice P2P_2 contains 2 elements-----> Node 6  Node 8
-    P2PDevices[3] = pointToPoint.Install(nodes.Get(6), nodes.Get(9)); // NetDevice P2P_3 contains 2 elements-----> Node 6  Node 9
-    // DataRate = 100Mbps Delay = 20ms
-    pointToPoint.SetDeviceAttribute("DataRate", StringValue("100Mbps"));
-    pointToPoint.SetChannelAttribute("Delay", StringValue("20ms"));  
-    P2PDevices[4] = pointToPoint.Install(nodes.Get(2), nodes.Get(4)); // NetDevice P2P_4 contains 2 elements-----> Node 2  Node 4
-    P2PDevices[5] = pointToPoint.Install(nodes.Get(4), nodes.Get(5)); // NetDevice P2P_5 contains 2 elements-----> Node 4  Node 5
-    P2PDevices[6] = pointToPoint.Install(nodes.Get(4), nodes.Get(10)); // NetDevice P2P_6 contains 2 elements-----> Node 4  Node 10
-    // DataRate = 10Mbps Delay = 200ms
-    pointToPoint.SetDeviceAttribute("DataRate", StringValue("10Mbps"));
-    pointToPoint.SetChannelAttribute("Delay", StringValue("200ms"));
-    P2PDevices[7] = pointToPoint.Install(nodes.Get(4), nodes.Get(3));  // NetDevice P2P_7 contains 2 elements-----> Node 4  Node 3  
+    
+    installP2PNetDevices(&nodes, P2PDevices, nP2PDevices, pointToPoint);  
 
     // Wifi -> tutta la parte del wi-fi è un miracolo di Natale se funziona, non mi azzarderei a toccarla
     YansWifiChannelHelper channel = YansWifiChannelHelper::Default();
@@ -119,17 +106,17 @@ int main(int argc, char* argv[]) {
 
     if(verbose) printAllNetDevices(csmaDevices, P2PDevices, nP2PDevices,  adhocDevices);
 
-    InternetStackHelper stack; // istallazione indirizzi IP e network layer
+    InternetStackHelper stack; // installazione indirizzi IP e network layer
     stack.Install(nodes);
     Ipv4AddressHelper address;
     // TODO: minimizzare gli indirizzi IP in modo che la mask sia più stringente possibile
-    address.SetBase("10.1.1.0", "255.255.255.0"); // I dispositivi collegati alla rete CSMA appartengono tutti alla sottorete 10.1.1.0 (mask: 255.255.255.0)
+    address.SetBase("10.1.1.0", "255.255.255.0"); // I dispositivi collegati alla rete CSMA appartengono alla sottorete 10.1.1.0 (mask: 255.255.255.0)
     Ipv4InterfaceContainer csmaInterfaces;
     csmaInterfaces = address.Assign(csmaDevices);
 
     Ipv4InterfaceContainer P2PInterfaces[nP2PDevices];  // I dispositivi collegati ai P2P appartengono alle sottoreti da 10.1.2.0 a 10.1.9.0 (mask: 255.255.255.0)
-    for(uint16_t i = 2; i < nP2PDevices + 2; i++) {     // Nei dispositivi P2P c'è il maggiore potenziale per diminuire la sottorete, visto che potenzialmente una sottorete
-        std::stringstream networkStringStream;          // potrebbe essere rappresentata con 2 bit (mask /32)
+    for(uint16_t i = 2; i < nP2PDevices + 2; i++) {     // Nei dispositivi P2P c'è il maggiore potenziale per diminuire la sottorete, visto che  
+        std::stringstream networkStringStream;          // una sottorete potrebbe essere rappresentata con 2 bit (mask /32)
         networkStringStream<<"10.1."<<i<<".0";          // mi rendo conto che questa gestione delle stringhe è orribile ma sono le 2 di notte e C++ può andare a infilarsi le classi std::stringstream e std::string nel buco del culo
         const std::string tmp = networkStringStream.str(); // se non lo fai così per qualche motivo si incarta, quindi TODO: fix ma attenzione a testare per bene
         const char *networkIp = tmp.c_str();
@@ -155,41 +142,52 @@ int main(int argc, char* argv[]) {
     // UDP Echo application with Client 7 and Server 3
     UdpEchoServerHelper echoServer(9);
 
-    ApplicationContainer serverApps = echoServer.Install(nodes.Get(7)); // istallazione del server sul nodo 7
-    serverApps.Start(Seconds(1.0)); // TODO: rivedi questi valori che li ho copia incollati dall'esempio del Lacava
-    serverApps.Stop(Seconds(10.0)); // TODO: rivedi questi valori che li ho copia incollati dall'esempio del Lacava
+    ApplicationContainer serverApps = echoServer.Install(nodes.Get(3)); // installazione del server sul nodo 7
+    serverApps.Start(Seconds(1.0)); 
+    serverApps.Stop(Seconds(10.0)); 
 
-    UdpEchoClientHelper echoClient(P2PInterfaces[1].GetAddress(1), 9);
+    UdpEchoClientHelper echoClient(P2PInterfaces[7].GetAddress(1), 9);
     echoClient.SetAttribute("MaxPackets", UintegerValue(250)); 
-    echoClient.SetAttribute("Interval", TimeValue(Seconds(1.0))); // TODO: rivedi questi valori che li ho copia incollati dall'esempio del Lacava
+    echoClient.SetAttribute("Interval", TimeValue(MilliSeconds(20))); 
     echoClient.SetAttribute("PacketSize", UintegerValue(2032));
 
-    ApplicationContainer clientApps = echoClient.Install(nodes.Get(3));
-    clientApps.Start(Seconds(2.0)); // TODO: rivedi questi valori che li ho copia incollati dall'esempio del Lacava
-    clientApps.Stop(Seconds(10.0)); // TODO: rivedi questi valori che li ho copia incollati dall'esempio del Lacava
+    ApplicationContainer clientApps = echoClient.Install(nodes.Get(7));
+    clientApps.Start(Seconds(2.0)); 
+    clientApps.Stop(Seconds(10.0)); 
 
-    pointToPoint.EnablePcap("Server[7]_", P2PDevices[1].Get(1) , true); // Gestione della generazione di file .pcap provvisoria
-    pointToPoint.EnablePcap("Client[3]_", P2PDevices[7].Get(1), true);  // Poi la si metterà sotto e solo per i nodi router, qui volevo verificare UDP funzionasse (e pare di sì)
+    echoClient.SetFill(clientApps.Get(0), "Hello World");
     
     //TODO: TCP
     
     Ipv4GlobalRoutingHelper::PopulateRoutingTables();
 
-    /*
-    // TODO: Abilitare tracing per nodi router (2, 4, 5, 10)
-    if (tracing == true){
+    if (tracing == true){ // tracing promiscuo per routers e switches (2, 4, 5, 10)
+        csma.EnablePcap("task-2-1.pcap", csmaDevices.Get(2), true, true); // nodo 2 -> netDevice csma
+        pointToPoint.EnablePcap("task", P2PDevices[1].Get(0), true);      // nodo 2 -> netDevice p2p 5--7
+        pointToPoint.EnablePcap("task", P2PDevices[4].Get(1), true);      // nodo 4 -> netDevice p2p 4--2
+        pointToPoint.EnablePcap("task", P2PDevices[7].Get(0), true);      // nodo 4 -> netDevice p2p 4--3
+        pointToPoint.EnablePcap("task", P2PDevices[5].Get(0), true);      // nodo 4 -> netDevice p2p 4--5
+        pointToPoint.EnablePcap("task", P2PDevices[6].Get(0), true);      // nodo 4 -> netDevice p2p 4--10
+        pointToPoint.EnablePcap("task", P2PDevices[5].Get(1), true);      // nodo 5 -> netDevice p2p 5--4
+        pointToPoint.EnablePcap("task", P2PDevices[0].Get(0), true);      // nodo 5 -> netDevice p2p 5--6
+        pointToPoint.EnablePcap("task", P2PDevices[1].Get(0), true);      // nodo 5 -> netDevice p2p 5--7
         phy.SetPcapDataLinkType(WifiPhyHelper::DLT_IEEE802_11_RADIO);
-        phy.EnablePcap("Router_10", adhocDevices.Get(0), true);
-        pointToPoint.EnablePcap("Router_2", devices_2_4.Get(0), true);
-        pointToPoint.EnablePcap("Router_4", devices_2_4.Get(1), true);
-        pointToPoint.EnablePcap("Router_5", devices_4_5.Get(1), true);
-    } else {
+        phy.EnablePcap("task-10", adhocDevices.Get(0), true);             // nodo 10 -> netDevice wifi 
+
+    } else { // tracing non promiscuo per routers e switches (2, 4, 5, 10)
+        csma.EnablePcap("task-2-1.pcap", csmaDevices.Get(2), false, true);  // nodo 2 -> netDevice csma
+        pointToPoint.EnablePcap("task", P2PDevices[1].Get(0));              // nodo 2 -> netDevice p2p 5--7
+        pointToPoint.EnablePcap("task", P2PDevices[4].Get(1));              // nodo 4 -> netDevice p2p 4--2
+        pointToPoint.EnablePcap("task", P2PDevices[5].Get(0));              // nodo 4 -> netDevice p2p 4--3
+        pointToPoint.EnablePcap("task", P2PDevices[6].Get(0));              // nodo 4 -> netDevice p2p 4--5
+        pointToPoint.EnablePcap("task", P2PDevices[7].Get(0));              // nodo 4 -> netDevice p2p 4--10
+        pointToPoint.EnablePcap("task", P2PDevices[5].Get(1));              // nodo 5 -> netDevice p2p 5--4
+        pointToPoint.EnablePcap("task", P2PDevices[0].Get(0));              // nodo 5 -> netDevice p2p 5--6
+        pointToPoint.EnablePcap("task", P2PDevices[1].Get(0));              // nodo 5 -> netDevice p2p 5--7
         phy.SetPcapDataLinkType(WifiPhyHelper::DLT_IEEE802_11_RADIO);
-        phy.EnablePcapAll("Wi_Fi");
-        pointToPoint.EnablePcapAll("P2P");
-        csma.EnablePcapAll("CSMA");
+        phy.EnablePcap("task-10", adhocDevices.Get(0));                     // nodo 10 -> netDevice wifi
     }
-    */
+
     Simulator::Run();
     Simulator::Stop(Seconds(15));
     Simulator::Destroy();
@@ -204,10 +202,10 @@ void checkArgs(int argc, char * argv[]) {
     std::string matricolaInserita = "";
     CommandLine cmd;
     cmd.AddValue("matricola-referente", "Matricola del referente del Gruppo 25", matricolaInserita);
-    cmd.AddValue("verbose", "Set log level a LOG_LEVEL_INFO", verbose);
     cmd.AddValue("enable-tracing", "Abilitare il tracing promiscuo dei pacchetti", tracing);
     cmd.AddValue("force-rts-cts", "Forzare l'uso di protocollo RTS/CTS", enableRtsCts);
-    cmd.Parse (argc, argv); 
+    cmd.AddValue("verbose", "Set log level a LOG_LEVEL_INFO", verbose);
+    cmd.Parse(argc, argv); 
     if(matricolaInserita.compare((std::string) "") == 0) {
         std::cerr << MISSING_MATRICOLA;
         exit(EXIT_FAILURE);
@@ -227,11 +225,10 @@ void checkArgs(int argc, char * argv[]) {
     } else {
         Config::SetDefault("ns3::WifiRemoteStationManager::RtsCtsThreshold",UintegerValue(100));
     }
-    if(tracing) std::cout << TRACING_OK;  
-     
+    if(tracing) std::cout << TRACING_OK;
 }
 
-void createAllNodes(NodeContainer *nodes, NodeContainer *p2pNodes, NodeContainer *wifiNodes, NodeContainer *csmaNodes) {
+void initializeNodes(NodeContainer *nodes, NodeContainer *p2pNodes, NodeContainer *wifiNodes, NodeContainer *csmaNodes) {
     nodes->Create(20); // Creo tutti i miei nodi 
 
     // Aggiungo i nodi collegati con CSMA nell mio Container specifico , mi aiuto con gli indici
@@ -273,6 +270,26 @@ void createAllNodes(NodeContainer *nodes, NodeContainer *p2pNodes, NodeContainer
     wifiNodes->Add(nodes->Get(17));
     wifiNodes->Add(nodes->Get(18));
     wifiNodes->Add(nodes->Get(19));
+}
+
+void installP2PNetDevices(NodeContainer *nodes, NetDeviceContainer P2PDevices[], uint16_t nP2PDevices, PointToPointHelper pointToPoint) {
+    pointToPoint.SetDeviceAttribute("DataRate", StringValue("5Mbps")); 
+    pointToPoint.SetChannelAttribute("Delay", StringValue("20ms")); 
+    // DataRate = 5Mbps Delay = 20ms
+    P2PDevices[0] = pointToPoint.Install(nodes->Get(5), nodes->Get(6)); // NetDevice P2P_0 contains 2 elements-----> Node 5  Node 6
+    P2PDevices[1] = pointToPoint.Install(nodes->Get(5), nodes->Get(7)); // NetDevice P2P_1 contains 2 elements-----> Node 5  Node 7
+    P2PDevices[2] = pointToPoint.Install(nodes->Get(6), nodes->Get(8)); // NetDevice P2P_2 contains 2 elements-----> Node 6  Node 8
+    P2PDevices[3] = pointToPoint.Install(nodes->Get(6), nodes->Get(9)); // NetDevice P2P_3 contains 2 elements-----> Node 6  Node 9
+    // DataRate = 100Mbps Delay = 20ms
+    pointToPoint.SetDeviceAttribute("DataRate", StringValue("100Mbps"));
+    pointToPoint.SetChannelAttribute("Delay", StringValue("20ms"));  
+    P2PDevices[4] = pointToPoint.Install(nodes->Get(2), nodes->Get(4)); // NetDevice P2P_4 contains 2 elements-----> Node 2  Node 4
+    P2PDevices[5] = pointToPoint.Install(nodes->Get(4), nodes->Get(5)); // NetDevice P2P_5 contains 2 elements-----> Node 4  Node 5
+    P2PDevices[6] = pointToPoint.Install(nodes->Get(4), nodes->Get(10)); // NetDevice P2P_6 contains 2 elements-----> Node 4  Node 10
+    // DataRate = 10Mbps Delay = 200ms
+    pointToPoint.SetDeviceAttribute("DataRate", StringValue("10Mbps"));
+    pointToPoint.SetChannelAttribute("Delay", StringValue("200ms"));
+    P2PDevices[7] = pointToPoint.Install(nodes->Get(4), nodes->Get(3));  // NetDevice P2P_7 contains 2 elements-----> Node 4  Node 3
 }
 
 void printAllNodes(NodeContainer nodes, NodeContainer p2pNodes, NodeContainer wifiNodes, NodeContainer csmaNodes) {
