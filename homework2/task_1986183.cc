@@ -11,6 +11,8 @@
 #include "ns3/ssid.h"
 #include "ns3/yans-wifi-helper.h"
 
+// TODO:togli cout, sostituisci con logging nativo ns-3
+
 // CONSOLE MESSAGES
 #define MATRICOLA_REF (std::string) "1986183"
 #define MISSING_MATRICOLA "[Error] Inserire la matricola dello studente referente come parametro. (Hint: Gruppo 25).\n"
@@ -20,8 +22,8 @@
 #define TRACING_OK "\tTracing promiscuo abilitato. Proceeding...\n"
 #define TOO_MANY_ARGUMENTS "[Error] Troppi argomenti (max 3).\n"
 #define N_ARGS 5
-#define STOP_TIME 10 // 15
-#define MEGABYTES 1 // 1000000
+#define STOP_TIME 15 // 15
+#define MEGABYTES 1000000 // 1000000
 using namespace ns3;
 
 bool enableRtsCts = false;
@@ -50,7 +52,7 @@ void printAllInterfaces(Ipv4InterfaceContainer interface, NetDeviceContainer con
 
 int main(int argc, char* argv[]) {
     checkArgs(argc, argv); 
-
+    Time::SetResolution(Time::NS);
     // Come scelta progettuale abbiamo deciso di creare:
     NodeContainer nodes;            // un Container generale per una gestione migliore degli indici [0-19];
     NodeContainer p2pNodes;         // un Container per nodi collegati da topologie P2P;
@@ -115,7 +117,6 @@ int main(int argc, char* argv[]) {
     Ipv4InterfaceContainer wifiInterfaces;
     uint16_t nP2PInterfaces = 8;
     Ipv4InterfaceContainer P2PInterfaces[8];
-    // TODO: minimizzare gli indirizzi IP in modo che la mask sia più stringente possibile
     address.SetBase("10.1.1.128", "255.255.255.248");
     csmaInterfaces = address.Assign(csmaDevices);
     address.SetBase("10.1.1.192", "255.255.255.240");
@@ -145,8 +146,7 @@ int main(int argc, char* argv[]) {
     ApplicationContainer serverApps = echoServer.Install(nodes.Get(3)); // installazione del server sul nodo 3
     serverApps.Start(Seconds(1.0)); 
     serverApps.Stop(Seconds(STOP_TIME)); 
-
-    UdpEchoClientHelper echoClient(P2PInterfaces[7].GetAddress(1), 9);
+    UdpEchoClientHelper echoClient(P2PInterfaces[7].GetAddress(1), 9); // TODO fix UDP
     echoClient.SetAttribute("MaxPackets", UintegerValue(250)); 
     echoClient.SetAttribute("Interval", TimeValue(MilliSeconds(20))); 
     echoClient.SetAttribute("PacketSize", UintegerValue(2032));
@@ -211,7 +211,7 @@ int main(int argc, char* argv[]) {
     sourceApps_n3.Stop(Seconds(STOP_TIME));
 
     Ipv4GlobalRoutingHelper::PopulateRoutingTables();
-
+    // TODO: tracing promiscuo/non promisco + generazione un file .pcap per Node e non per NetDevice
     if (tracing == true){ // tracing promiscuo per routers e switches (2, 4, 5, 10)
         csma.EnablePcap("task-2-0.pcap", csmaDevices.Get(2), true, true); // nodo 2 -> netDevice csma
         pointToPoint.EnablePcap("task", P2PDevices[4].Get(0), true);      // nodo 2 -> netDevice p2p 2--4
@@ -275,14 +275,14 @@ void checkArgs(int argc, char * argv[]) {
     }
     if(verbose) { // TODO: capire quali LogComponent vanno abilitate
         // LogComponentEnable("UdpEchoServerApplication", LOG_LEVEL_INFO);
-        // LogComponentEnable("PacketSink", LOG_LEVEL_INFO);
         // LogComponentEnable("UdpEchoClientApplication", LOG_LEVEL_INFO);
-        // LogComponentEnable("OnOffApplication", LOG_LEVEL_INFO);
+        // LogComponentEnable("PacketSink", LOG_LEVEL_INFO);
+        // LogComponentEnable("BulkSendApplication", LOG_LEVEL_INFO);
     } 
     if(enableRtsCts) { 
         std::cout << RTS_CTS_OK;
         Config::SetDefault("ns3::WifiRemoteStationManager::RtsCtsThreshold",UintegerValue(1));
-    } else {
+    } else { // TODO: check RtsCts threshold
         Config::SetDefault("ns3::WifiRemoteStationManager::RtsCtsThreshold",UintegerValue(2347));
     }
     if(tracing) std::cout << TRACING_OK;
