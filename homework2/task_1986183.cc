@@ -20,7 +20,8 @@
 #define TRACING_OK "\tTracing promiscuo abilitato. Proceeding...\n"
 #define TOO_MANY_ARGUMENTS "[Error] Troppi argomenti (max 3).\n"
 #define N_ARGS 5
-#define STOP_TIME 15
+#define STOP_TIME 10 // 15
+#define MEGABYTES 1 // 1000000
 using namespace ns3;
 
 bool enableRtsCts = false;
@@ -110,24 +111,22 @@ int main(int argc, char* argv[]) {
     InternetStackHelper stack; // installazione indirizzi IP e network layer
     stack.Install(nodes);
     Ipv4AddressHelper address;
-    // TODO: minimizzare gli indirizzi IP in modo che la mask sia più stringente possibile
-    address.SetBase("10.1.1.0", "255.255.255.0"); // I dispositivi collegati alla rete CSMA appartengono alla sottorete 10.1.1.0 (mask: 255.255.255.0)
     Ipv4InterfaceContainer csmaInterfaces;
-    csmaInterfaces = address.Assign(csmaDevices);
-
-    Ipv4InterfaceContainer P2PInterfaces[nP2PDevices];      // I dispositivi collegati ai P2P appartengono alle sottoreti da 10.1.2.0 a 10.1.9.0 (mask: 255.255.255.0)
-    for(uint16_t i = 2; i < nP2PDevices + 2; i++) {         // Nei dispositivi P2P c'è il maggiore potenziale per diminuire la sottorete, visto che  
-        std::stringstream networkStringStream;              // una sottorete potrebbe essere rappresentata con 2 bit (mask /32)
-        networkStringStream<<"10.1."<<i<<".0";              // mi rendo conto che questa gestione delle stringhe è orribile ma sono le 2 di notte e C++ può andare a infilarsi le classi std::stringstream e std::string nel buco del culo
-        const std::string tmp = networkStringStream.str();  // se non lo fai così per qualche motivo si incarta, quindi TODO: fix ma attenzione a testare per bene
-        const char *networkIp = tmp.c_str();
-        address.SetBase(networkIp, "255.255.255.0");
-        P2PInterfaces[i-2] = address.Assign(P2PDevices[i-2]);
-    }
-
-    address.SetBase("10.1.10.0", "255.255.255.0"); // I dispositivi collegati al wi-fi appartengono alla sottorete 10.1.10.0 (mask: 255.255.255.0)
     Ipv4InterfaceContainer wifiInterfaces;
+    uint16_t nP2PInterfaces = 8;
+    Ipv4InterfaceContainer P2PInterfaces[8];
+    // TODO: minimizzare gli indirizzi IP in modo che la mask sia più stringente possibile
+    address.SetBase("10.1.1.128", "255.255.255.248");
+    csmaInterfaces = address.Assign(csmaDevices);
+    address.SetBase("10.1.1.192", "255.255.255.240");
     wifiInterfaces = address.Assign(adhocDevices);
+    char buf[16];
+    uint8_t p2pPartialSubnetAddress = 224;
+    for(uint8_t i = 0; i < nP2PInterfaces; i++) {
+        sprintf(buf, "10.1.1.%d", p2pPartialSubnetAddress+i*4);
+        address.SetBase(buf, "255.255.255.252");
+        P2PInterfaces[i] = address.Assign(P2PDevices[i]);
+    }
 
     if(verbose) {                                           // la funzione printAllInterfaces è stata realizzata puntando alla  
         std::cout << "CSMA IPv4: \n";                       // modularità piuttosto che alla struttura del nostro scriptino
@@ -139,7 +138,7 @@ int main(int argc, char* argv[]) {
         std::cout << "WiFi IPv4: \n";
         printAllInterfaces(wifiInterfaces, adhocDevices);
     }
-    
+
     // UDP Echo application with Client 7 and Server 3
     UdpEchoServerHelper echoServer(9);
 
@@ -171,7 +170,7 @@ int main(int argc, char* argv[]) {
 
     Ipv4Address sinkAddress_n1 = csmaInterfaces.GetAddress(0);
     BulkSendHelper source_n1("ns3::TcpSocketFactory", InetSocketAddress(sinkAddress_n1, port));
-    uint32_t maxBytes_n1 = 1173 * 100000;
+    uint32_t maxBytes_n1 = 1173 * MEGABYTES;
     source_n1.SetAttribute("MaxBytes", UintegerValue(maxBytes_n1));
     ApplicationContainer sourceApps_n1 = source_n1.Install(nodes.Get(17));
     sourceApps_n1.Start(Seconds(0.27));
@@ -182,19 +181,19 @@ int main(int argc, char* argv[]) {
     // Sender(BulkSendApplication):     Node 9 
     port = 10;
     PacketSinkHelper sink_n2("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), port));
-    ApplicationContainer sinkApps_n2 = sink_n2.Install(nodes.Get(1));
+    ApplicationContainer sinkApps_n2 = sink_n2.Install(nodes.Get(1)); // sink_n2.Install(nodes.Get(3)); // 
     sinkApps_n2.Start(Seconds(0.0));
     sinkApps_n2.Stop(Seconds(STOP_TIME));
 
-    Ipv4Address sinkAddress_n2 = csmaInterfaces.GetAddress(1); // csmaInterfaces.GetAddress(1);
+    Ipv4Address sinkAddress_n2 = csmaInterfaces.GetAddress(1); // P2PInterfaces[7].GetAddress(1); // 
     BulkSendHelper source_n2("ns3::TcpSocketFactory", InetSocketAddress(sinkAddress_n2, port));
-    uint32_t maxBytes_n2 = 1201 * 100000;
+    uint32_t maxBytes_n2 = 1201 * MEGABYTES;
     source_n2.SetAttribute("MaxBytes", UintegerValue(maxBytes_n2));
     ApplicationContainer sourceApps_n2 = source_n2.Install(nodes.Get(9));
     sourceApps_n2.Start(Seconds(3.55));
     sourceApps_n2.Stop(Seconds(STOP_TIME));
     
-    // TCP N:2 delivery of a file of 1837 MB starting at 3.40s
+    // TCP N:3 delivery of a file of 1837 MB starting at 3.40s
     // Receiver(PacketSink):            Server 0
     // Sender(BulkSendApplication):     Node 14
     port = 7;
@@ -205,7 +204,7 @@ int main(int argc, char* argv[]) {
 
     Ipv4Address sinkAddress_n3 = csmaInterfaces.GetAddress(0);
     BulkSendHelper source_n3("ns3::TcpSocketFactory", InetSocketAddress(sinkAddress_n3, port));
-    uint32_t maxBytes_n3 = 1837 * 100000;
+    uint32_t maxBytes_n3 = 1837 * MEGABYTES;
     source_n3.SetAttribute("MaxBytes", UintegerValue(maxBytes_n3));
     ApplicationContainer sourceApps_n3 = source_n3.Install(nodes.Get(14));
     sourceApps_n3.Start(Seconds(3.40));
@@ -214,8 +213,8 @@ int main(int argc, char* argv[]) {
     Ipv4GlobalRoutingHelper::PopulateRoutingTables();
 
     if (tracing == true){ // tracing promiscuo per routers e switches (2, 4, 5, 10)
-        csma.EnablePcap("task-2-1.pcap", csmaDevices.Get(2), true, true); // nodo 2 -> netDevice csma
-        pointToPoint.EnablePcap("task", P2PDevices[1].Get(0), true);      // nodo 2 -> netDevice p2p 5--7
+        csma.EnablePcap("task-2-0.pcap", csmaDevices.Get(2), true, true); // nodo 2 -> netDevice csma
+        pointToPoint.EnablePcap("task", P2PDevices[4].Get(0), true);      // nodo 2 -> netDevice p2p 2--4
         pointToPoint.EnablePcap("task", P2PDevices[4].Get(1), true);      // nodo 4 -> netDevice p2p 4--2
         pointToPoint.EnablePcap("task", P2PDevices[7].Get(0), true);      // nodo 4 -> netDevice p2p 4--3
         pointToPoint.EnablePcap("task", P2PDevices[5].Get(0), true);      // nodo 4 -> netDevice p2p 4--5
@@ -227,8 +226,8 @@ int main(int argc, char* argv[]) {
         phy.EnablePcap("task-10", adhocDevices.Get(0), true);             // nodo 10 -> netDevice wifi 
 
     } else { // tracing non promiscuo per routers e switches (2, 4, 5, 10)
-        csma.EnablePcap("task-2-1.pcap", csmaDevices.Get(2), false, true);  // nodo 2 -> netDevice csma
-        pointToPoint.EnablePcap("task", P2PDevices[1].Get(0));              // nodo 2 -> netDevice p2p 5--7
+        csma.EnablePcap("task-2-0.pcap", csmaDevices.Get(2), false, true);  // nodo 2 -> netDevice csma
+        pointToPoint.EnablePcap("task", P2PDevices[4].Get(0));              // nodo 2 -> netDevice p2p 2--4
         pointToPoint.EnablePcap("task", P2PDevices[4].Get(1));              // nodo 4 -> netDevice p2p 4--2
         pointToPoint.EnablePcap("task", P2PDevices[5].Get(0));              // nodo 4 -> netDevice p2p 4--3
         pointToPoint.EnablePcap("task", P2PDevices[6].Get(0));              // nodo 4 -> netDevice p2p 4--5
