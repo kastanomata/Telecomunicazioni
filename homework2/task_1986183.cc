@@ -20,6 +20,7 @@
 #define TRACING_OK "\tTracing promiscuo abilitato. Proceeding...\n"
 #define TOO_MANY_ARGUMENTS "[Error] Troppi argomenti (max 3).\n"
 #define N_ARGS 5
+#define STOP_TIME 15
 using namespace ns3;
 
 bool enableRtsCts = false;
@@ -144,7 +145,7 @@ int main(int argc, char* argv[]) {
 
     ApplicationContainer serverApps = echoServer.Install(nodes.Get(3)); // installazione del server sul nodo 3
     serverApps.Start(Seconds(1.0)); 
-    serverApps.Stop(Seconds(10.0)); 
+    serverApps.Stop(Seconds(STOP_TIME)); 
 
     UdpEchoClientHelper echoClient(P2PInterfaces[7].GetAddress(1), 9);
     echoClient.SetAttribute("MaxPackets", UintegerValue(250)); 
@@ -153,80 +154,63 @@ int main(int argc, char* argv[]) {
 
     ApplicationContainer clientApps = echoClient.Install(nodes.Get(7)); // installazione del client sul nodo 7
     clientApps.Start(Seconds(2.0)); 
-    clientApps.Stop(Seconds(10.0)); 
+    clientApps.Stop(Seconds(STOP_TIME)); 
 
     echoClient.SetFill(clientApps.Get(0), "Hello World"); // TODO: mettiamo nomi 
     
     // TODO: TCP
-    // TCP N:1 delivery of a file of 1173 MB starting at 0.27 s
-    // Sender: Node 17 Receiver: Server 0
-    uint16_t receiverPort = 1; // porta a caso
-    Address hubLocalAddress(InetSocketAddress(Ipv4Address::GetAny(), receiverPort)); 
-    PacketSinkHelper packetSinkHelper("ns3::TcpSocketFactory", hubLocalAddress);
-    ApplicationContainer receiver = packetSinkHelper.Install(nodes.Get(0)); // installo il packetSink sul nodo destinatario
-    receiver.Start(Seconds(0.27));
-    receiver.Stop(Seconds(20.0));
+    uint16_t port;
+    // TCP N:1 delivery of a file of 1173 MB starting at 0.27s
+    // Receiver(PacketSink):            Server 0
+    // Sender(BulkSendApplication):     Node 17 
+    port = 9;
+    PacketSinkHelper sink_n1("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), port));
+    ApplicationContainer sinkApps_n1 = sink_n1.Install(nodes.Get(0));
+    sinkApps_n1.Start(Seconds(0.0));
+    sinkApps_n1.Stop(Seconds(STOP_TIME));
 
-    OnOffHelper onOffHelper("ns3::TcpSocketFactory", Address()); // un indirizzo a caso, tanto l'onOff non deve ricevere nulla
-    onOffHelper.SetAttribute("OnTime", StringValue("ns3::ConstantRandomVariable[Constant=0.27]")); // da quando inizia a trasmettere i dati l'OnOff, da rivedere
-    //onOffHelper.SetAttribute("OffTime", StringValue("ns3::ConstantRandomVariable[Constant=0]")); // da quando smette di trasmettere i dati l'OnOff, da rivedere
+    Ipv4Address sinkAddress_n1 = csmaInterfaces.GetAddress(0);
+    BulkSendHelper source_n1("ns3::TcpSocketFactory", InetSocketAddress(sinkAddress_n1, port));
+    uint32_t maxBytes_n1 = 1173 * 100000;
+    source_n1.SetAttribute("MaxBytes", UintegerValue(maxBytes_n1));
+    ApplicationContainer sourceApps_n1 = source_n1.Install(nodes.Get(17));
+    sourceApps_n1.Start(Seconds(0.27));
+    sourceApps_n1.Stop(Seconds(STOP_TIME));
 
-    uint16_t senderPort =  1; // porta a caso pt2 il ritorno
-    ApplicationContainer sender;
-    AddressValue remoteAddress(InetSocketAddress(csmaInterfaces.GetAddress(0), senderPort)); // indirizzo del nodo 0, si trova nelle CSMA interfaces
-    onOffHelper.SetAttribute("Remote", remoteAddress); // assegna l'indirizzo del server all'Helper in modo che i pacchetti siano inviati al giusto destinatario
-    onOffHelper.SetAttribute("PacketSize", UintegerValue(1024)); // size del singolo frammento (forse MSS?)
-    onOffHelper.SetAttribute("MaxBytes", UintegerValue((1173*1000000) / 8)); // quantità di dati da trasmettere
-    sender.Add(onOffHelper.Install(nodes.Get(17))); // installo l'OnOff sul nodo mittente
-    sender.Start(Seconds(0.27));
-    sender.Stop(Seconds(20.0));
+    // TCP N:2 delivery of a file of 1201 MB starting at 3.55s
+    // Receiver(PacketSink):            Server 1
+    // Sender(BulkSendApplication):     Node 9 
+    port = 10;
+    PacketSinkHelper sink_n2("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), port));
+    ApplicationContainer sinkApps_n2 = sink_n2.Install(nodes.Get(1));
+    sinkApps_n2.Start(Seconds(0.0));
+    sinkApps_n2.Stop(Seconds(STOP_TIME));
 
-    // TCP N:2 delivery of a file of 1201 MB starting at 3.55 s
-    // Sender: Node 9 Receiver: Server 1
-    uint16_t receiverPort1 =2; // porta a caso
-    Address hubLocalAddress1(InetSocketAddress(Ipv4Address::GetAny(), receiverPort1)); 
-    PacketSinkHelper packetSinkHelper1("ns3::TcpSocketFactory", hubLocalAddress1);
-    ApplicationContainer receiver1 = packetSinkHelper1.Install(nodes.Get(1)); // installo il packetSink sul nodo destinatario
-    receiver1.Start(Seconds(3.55));
-    receiver1.Stop(Seconds(20.0));
-
-    OnOffHelper onOffHelper1("ns3::TcpSocketFactory", Address()); // un indirizzo a caso, tanto l'onOff non deve ricevere nulla
-    onOffHelper1.SetAttribute("OnTime", StringValue("ns3::ConstantRandomVariable[Constant=3.55]")); // da quando inizia a trasmettere i dati l'OnOff, da rivedere
-    //onOffHelper.SetAttribute("OffTime", StringValue("ns3::ConstantRandomVariable[Constant=0]")); // da quando smette di trasmettere i dati l'OnOff, da rivedere
-
-    uint16_t senderPort1 = 2; // porta a caso pt2 il ritorno
-    ApplicationContainer sender1;
-    AddressValue remoteAddress1(InetSocketAddress(csmaInterfaces.GetAddress(1), senderPort1)); // indirizzo del nodo 1, si trova nelle CSMA interfaces
-    onOffHelper1.SetAttribute("Remote", remoteAddress1); // assegna l'indirizzo del server all'Helper in modo che i pacchetti siano inviati al giusto destinatario
-    onOffHelper.SetAttribute("PacketSize", UintegerValue(1024)); // size del singolo frammento (forse MSS?)
-    onOffHelper1.SetAttribute("MaxBytes", UintegerValue((1201*1000000) / 8)); // quantità di dati da trasmettere
-    sender1.Add(onOffHelper1.Install(nodes.Get(9))); // installo l'OnOff sul nodo mittente
-    sender1.Start(Seconds(3.55));
-    sender1.Stop(Seconds(20.0));
-
-    // TCP N:3 delivery of a file of 1837 MB starting at 3.40 s
-    // Sender: Node 14 Receiver: Server 0
-    uint16_t receiverPort2 = 3; // porta a caso
-    Address hubLocalAddress2(InetSocketAddress(Ipv4Address::GetAny(), receiverPort2)); 
-    PacketSinkHelper packetSinkHelper2("ns3::TcpSocketFactory", hubLocalAddress2);
-    ApplicationContainer receiver2 = packetSinkHelper2.Install(nodes.Get(0)); // installo il packetSink sul nodo destinatario
-    receiver2.Start(Seconds(3.40));
-    receiver2.Stop(Seconds(20.0));
-
-    OnOffHelper onOffHelper2("ns3::TcpSocketFactory", Address()); // un indirizzo a caso, tanto l'onOff non deve ricevere nulla
-    onOffHelper2.SetAttribute("OnTime", StringValue("ns3::ConstantRandomVariable[Constant=3.40]")); // da quando inizia a trasmettere i dati l'OnOff, da rivedere
-    //onOffHelper.SetAttribute("OffTime", StringValue("ns3::ConstantRandomVariable[Constant=0]")); // da quando smette di trasmettere i dati l'OnOff, da rivedere
-
-    uint16_t senderPort2 = 3; // porta a caso pt2 il ritorno
-    ApplicationContainer sender2;
-    AddressValue remoteAddress2(InetSocketAddress(csmaInterfaces.GetAddress(0), senderPort2)); // indirizzo del nodo 0, si trova nelle CSMA interfaces
-    onOffHelper2.SetAttribute("Remote", remoteAddress2); // assegna l'indirizzo del server all'Helper in modo che i pacchetti siano inviati al giusto destinatario
-    onOffHelper.SetAttribute("PacketSize", UintegerValue(1024)); // size del singolo frammento (forse MSS?)
-    onOffHelper2.SetAttribute("MaxBytes", UintegerValue((1873*1000000) / 8)); // quantità di dati da trasmettere
-    sender2.Add(onOffHelper2.Install(nodes.Get(14))); // installo l'OnOff sul nodo mittente
-    sender2.Start(Seconds(3.40));
-    sender2.Stop(Seconds(20.0));
+    Ipv4Address sinkAddress_n2 = csmaInterfaces.GetAddress(1); // csmaInterfaces.GetAddress(1);
+    BulkSendHelper source_n2("ns3::TcpSocketFactory", InetSocketAddress(sinkAddress_n2, port));
+    uint32_t maxBytes_n2 = 1201 * 100000;
+    source_n2.SetAttribute("MaxBytes", UintegerValue(maxBytes_n2));
+    ApplicationContainer sourceApps_n2 = source_n2.Install(nodes.Get(9));
+    sourceApps_n2.Start(Seconds(3.55));
+    sourceApps_n2.Stop(Seconds(STOP_TIME));
     
+    // TCP N:2 delivery of a file of 1837 MB starting at 3.40s
+    // Receiver(PacketSink):            Server 0
+    // Sender(BulkSendApplication):     Node 14
+    port = 7;
+    PacketSinkHelper sink_n3("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), port));
+    ApplicationContainer sinkApps_n3 = sink_n3.Install(nodes.Get(0));
+    sinkApps_n3.Start(Seconds(0.0));
+    sinkApps_n3.Stop(Seconds(STOP_TIME));
+
+    Ipv4Address sinkAddress_n3 = csmaInterfaces.GetAddress(0);
+    BulkSendHelper source_n3("ns3::TcpSocketFactory", InetSocketAddress(sinkAddress_n3, port));
+    uint32_t maxBytes_n3 = 1837 * 100000;
+    source_n3.SetAttribute("MaxBytes", UintegerValue(maxBytes_n3));
+    ApplicationContainer sourceApps_n3 = source_n3.Install(nodes.Get(14));
+    sourceApps_n3.Start(Seconds(3.40));
+    sourceApps_n3.Stop(Seconds(STOP_TIME));
+
     Ipv4GlobalRoutingHelper::PopulateRoutingTables();
 
     if (tracing == true){ // tracing promiscuo per routers e switches (2, 4, 5, 10)
@@ -257,8 +241,15 @@ int main(int argc, char* argv[]) {
     }
 
     Simulator::Run();
-    Simulator::Stop(Seconds(20));
+    Simulator::Stop(Seconds(STOP_TIME));
     Simulator::Destroy();
+
+    Ptr<PacketSink> sink1 = DynamicCast<PacketSink>(sinkApps_n1.Get(0));
+    std::cout << "Total Bytes Received from PacketSink_1: " << sink1->GetTotalRx() << std::endl;
+    Ptr<PacketSink> sink2 = DynamicCast<PacketSink>(sinkApps_n2.Get(0));
+    std::cout << "Total Bytes Received from PacketSink_2: " << sink2->GetTotalRx() << std::endl;    
+    Ptr<PacketSink> sink3 = DynamicCast<PacketSink>(sinkApps_n3.Get(0));
+    std::cout << "Total Bytes Received from PacketSink_3: " << sink3->GetTotalRx() << std::endl;
     return 0;
 }
 
@@ -284,16 +275,16 @@ void checkArgs(int argc, char * argv[]) {
         std::cout << RIGHT_MATRICOLA;
     }
     if(verbose) { // TODO: capire quali LogComponent vanno abilitate
-        // LogComponentEnable("UdpEchoClientApplication", LOG_LEVEL_INFO);
         // LogComponentEnable("UdpEchoServerApplication", LOG_LEVEL_INFO);
-        LogComponentEnable("PacketSink", LOG_LEVEL_INFO);
-        LogComponentEnable("OnOffApplication", LOG_LEVEL_INFO);
+        // LogComponentEnable("PacketSink", LOG_LEVEL_INFO);
+        // LogComponentEnable("UdpEchoClientApplication", LOG_LEVEL_INFO);
+        // LogComponentEnable("OnOffApplication", LOG_LEVEL_INFO);
     } 
     if(enableRtsCts) { 
         std::cout << RTS_CTS_OK;
         Config::SetDefault("ns3::WifiRemoteStationManager::RtsCtsThreshold",UintegerValue(1));
     } else {
-        Config::SetDefault("ns3::WifiRemoteStationManager::RtsCtsThreshold",UintegerValue(100));
+        Config::SetDefault("ns3::WifiRemoteStationManager::RtsCtsThreshold",UintegerValue(2347));
     }
     if(tracing) std::cout << TRACING_OK;
 }
