@@ -62,25 +62,29 @@ int main(int argc, char* argv[]) {
     // UDP Echo application 
     // Receiver(UdpEchoServerApplication):   Server 3
     // Sender(UdpEchoClientApplication):     Node 17
-    UdpEchoServerHelper echoServer(DISCARD_PORT);
+    uint16_t port = 46818;
+    UdpEchoServerHelper echoServer(port);
     Address echoServerAddress = P2PInterfaces[7].GetAddress(1);
     ApplicationContainer serverApps = echoServer.Install(nodes.Get(3)); // installazione del server sul nodo 3
     serverApps.Start(Seconds(0.0)); 
     serverApps.Stop(Seconds(STOP_TIME)); 
 
-    UdpEchoClientHelper echoClient(echoServerAddress, DISCARD_PORT);
+    UdpEchoClientHelper echoClient(echoServerAddress, port);
     echoClient.SetAttribute("MaxPackets", UintegerValue(250)); 
     echoClient.SetAttribute("Interval", TimeValue(MilliSeconds(20))); 
-    echoClient.SetAttribute("PacketSize", UintegerValue(2032*8));
+    echoClient.SetAttribute("PacketSize", UintegerValue(2032));
     ApplicationContainer clientApps = echoClient.Install(nodes.Get(17)); // installazione del client sul nodo 7
-    echoClient.SetFill(clientApps.Get(0), "Antonio,Turco,1986183,Alfredo,Segala,1999676,Aldo,Vitti,1986292,Alessandro,Temperini,1983516,Davide,Scolamiero,2022977"); 
+
+    uint8_t *ptr = (uint8_t*) GRUPPO_25_NAMES;
+    echoClient.SetFill(clientApps.Get(0), ptr, sizeof(GRUPPO_25_NAMES), 2032);  
+
     clientApps.Start(Seconds(0.0)); 
     clientApps.Stop(Seconds(STOP_TIME)); 
 
     // TCP N:1 delivery of a file of 1173 MB starting at 0.27s
     // Receiver(PacketSink):            Server 0
     // Sender(BulkSendApplication):     Node 17 
-    uint16_t port = 2239;
+    port = 2239;
     PacketSinkHelper sink_n1("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), port));
     ApplicationContainer sinkApps_n1 = sink_n1.Install(nodes.Get(0));
     sinkApps_n1.Start(Seconds(0.0));
