@@ -18,7 +18,7 @@ int main(int argc, char* argv[]) {
     PointToPointHelper pointToPoint;                // Creo un helper per i nodi Point2Point, con Attributes DataRate e Delay settati di volta in volta secondo le specifiche
     uint16_t nP2PDevices = 8;                       // abbiamo un numero di collegamenti p2p uguale a 8
     NetDeviceContainer P2PDevices[nP2PDevices];     // creo un array piuttosto che singoli NetDeviceContainer, comodo per passare a funzioni e fare loop 
-    installP2PNetDevices(&nodes, P2PDevices, nP2PDevices, pointToPoint); 
+    installP2PNetDevices(&nodes, P2PDevices, pointToPoint); 
 
     // Wifi 
     YansWifiChannelHelper channel = YansWifiChannelHelper::Default();
@@ -45,7 +45,7 @@ int main(int argc, char* argv[]) {
     Ipv4InterfaceContainer csmaInterfaces;
     Ipv4InterfaceContainer wifiInterfaces;
     uint16_t nP2PInterfaces = 8;
-    Ipv4InterfaceContainer P2PInterfaces[8];
+    Ipv4InterfaceContainer P2PInterfaces[nP2PInterfaces];
 
     address.SetBase("10.1.1.128", "255.255.255.248");
     csmaInterfaces = address.Assign(csmaDevices);
@@ -72,7 +72,7 @@ int main(int argc, char* argv[]) {
     UdpEchoClientHelper echoClient(echoServerAddress, port);
     echoClient.SetAttribute("MaxPackets", UintegerValue(250)); 
     echoClient.SetAttribute("Interval", TimeValue(MilliSeconds(20))); 
-    echoClient.SetAttribute("PacketSize", UintegerValue(2032));
+    echoClient.SetAttribute("PacketSize", UintegerValue(2032)); // superfluo
     ApplicationContainer clientApps = echoClient.Install(nodes.Get(17)); // installazione del client sul nodo 7
 
     uint8_t *ptr = (uint8_t*) GRUPPO_25_NAMES;
@@ -146,7 +146,6 @@ int main(int argc, char* argv[]) {
       phy.EnablePcap("task", routers, true);
     }
     
-
     Simulator::Stop(Seconds(STOP_TIME));
     Simulator::Run();
     Simulator::Destroy();

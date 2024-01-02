@@ -1,18 +1,11 @@
-#include <stdlib.h>
-#include <cstring>
-#include "ns3/applications-module.h"
 #include "ns3/core-module.h"
-#include "ns3/csma-module.h"
-#include "ns3/internet-module.h"
-#include "ns3/mobility-module.h"
-#include "ns3/network-module.h"
-#include "ns3/point-to-point-module.h"
-#include "ns3/ssid.h"
 #include "ns3/yans-wifi-helper.h"
-
-#include "ns3/flow-monitor-helper.h"
-#include "ns3/flow-monitor.h"
-#include "ns3/ipv4-flow-classifier.h"
+#include "ns3/point-to-point-module.h"
+#include "ns3/csma-module.h"
+#include "ns3/mobility-module.h"
+#include "ns3/internet-module.h"
+#include "ns3/network-module.h"
+#include "ns3/applications-module.h"
 
 // CONSOLE MESSAGES
 #define MATRICOLA_REF (std::string) "1986183"
@@ -20,13 +13,11 @@
 #define MISSING_MATRICOLA "[Error] Inserire la matricola dello studente referente come parametro. (Hint: Gruppo 25)."
 #define WRONG_MATRICOLA "[Error] La matricola inserita è errata. (Hint: Gruppo 25)."
 #define RIGHT_MATRICOLA "\tMatricola inserita corretta. Proceeding..."
-#define RTS_CTS_OK "\tRTS/CTS abilitato. Proceeding..."
-#define TRACING_OK "\tTracing promiscuo abilitato. Proceeding..."
-#define STOP_TIME 10.0        // spec: 15
-#define N_ARGS 4            // spec: 4
-#define MEGABYTES 10000     // spec: 1000000
+#define STOP_TIME 15.0          // spec: 15
+#define N_ARGS 4                // spec: 4
+#define MEGABYTES 1000000       // spec: 1000000
 #define RTSCTS_STD_THRESHOLD 2347
-#define DISCARD_PORT 9
+#define GRUPPO_25_NAMES "Antonio,Turco,1986183,Alfredo,Segala,1999676,Aldo,Vitti,1986292,Alessandro,Temperini,1983516,Davide,Scolamiero,2022977,"
 
 using namespace ns3;
 
@@ -38,6 +29,7 @@ NS_LOG_COMPONENT_DEFINE("Task_1986183");
 
 // Controlla gli argomenti passati alla simulazione e setta le flag correttamente
 void checkArgs(int argc, char * argv[]) {
+    
     LogComponentEnable("Task_1986183", LOG_LEVEL_INFO);
     CommandLine cmd; // --print-help o --help per accedere a una descrizione delle flag da riga di comando
     cmd.AddValue("matricola-referente", "Matricola del referente del Gruppo 25", matricolaInserita);
@@ -57,7 +49,7 @@ void checkArgs(int argc, char * argv[]) {
     // LogComponentEnable("PacketSink", LOG_LEVEL_INFO);
     // LogComponentEnable("BulkSendApplication", LOG_LEVEL_INFO);
     if(enableRtsCts) { 
-        Config::SetDefault("ns3::WifiRemoteStationManager::RtsCtsThreshold",UintegerValue(1));
+        Config::SetDefault("ns3::WifiRemoteStationManager::RtsCtsThreshold",UintegerValue(0));
     } else { 
         Config::SetDefault("ns3::WifiRemoteStationManager::RtsCtsThreshold",UintegerValue(RTSCTS_STD_THRESHOLD));
     }
@@ -81,7 +73,7 @@ void initializeNodes(NodeContainer *nodes, NodeContainer *p2pNodes, NodeContaine
 }
 
 // Controlla gli argomenti passati alla simulazione e setta le flag correttamente
-void installP2PNetDevices(NodeContainer *nodes, NetDeviceContainer P2PDevices[], uint16_t nP2PDevices, PointToPointHelper pointToPoint) {
+void installP2PNetDevices(NodeContainer *nodes, NetDeviceContainer P2PDevices[], PointToPointHelper pointToPoint) {
     pointToPoint.SetDeviceAttribute("DataRate", StringValue("5Mbps")); 
     pointToPoint.SetChannelAttribute("Delay", StringValue("20ms")); 
     // DataRate = 5Mbps Delay = 20ms
