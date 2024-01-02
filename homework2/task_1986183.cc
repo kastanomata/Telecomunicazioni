@@ -26,7 +26,7 @@ int main(int argc, char* argv[]) {
     phy.SetChannel(channel.Create());
     
     WifiHelper wifi;
-    wifi.SetStandard (WIFI_STANDARD_80211g);                // Secondo indicazioni
+    wifi.SetStandard(WIFI_STANDARD_80211g);                 // Secondo indicazioni
     wifi.SetRemoteStationManager("ns3::AarfWifiManager");   // Secondo indicazioni
 
     WifiMacHelper mac;
@@ -129,20 +129,19 @@ int main(int argc, char* argv[]) {
     sourceApps_n3.Stop(Seconds(STOP_TIME));
 
     Ipv4GlobalRoutingHelper::PopulateRoutingTables();
-
-    if (tracing == true){                                                 // tracing promiscuo per routers e switches (2, 4, 5, 10)
-        csma.EnablePcap("task-2-0.pcap", csmaDevices.Get(2), true, true); // nodo 2 -> netDevice csma
-        pointToPoint.EnablePcap("task", P2PDevices[4].Get(0), true);      // nodo 2 -> netDevice p2p 2--4
-        pointToPoint.EnablePcap("task", P2PDevices[4].Get(1), true);      // nodo 4 -> netDevice p2p 4--2
-        pointToPoint.EnablePcap("task", P2PDevices[7].Get(0), true);      // nodo 4 -> netDevice p2p 4--3
-        pointToPoint.EnablePcap("task", P2PDevices[5].Get(0), true);      // nodo 4 -> netDevice p2p 4--5
-        pointToPoint.EnablePcap("task", P2PDevices[6].Get(0), true);      // nodo 4 -> netDevice p2p 4--10
-        pointToPoint.EnablePcap("task", P2PDevices[5].Get(1), true);      // nodo 5 -> netDevice p2p 5--4
-        pointToPoint.EnablePcap("task", P2PDevices[0].Get(0), true);      // nodo 5 -> netDevice p2p 5--6
-        pointToPoint.EnablePcap("task", P2PDevices[1].Get(0), true);      // nodo 5 -> netDevice p2p 5--7
-        phy.SetPcapDataLinkType(WifiPhyHelper::DLT_IEEE802_11_RADIO);
-        phy.EnablePcap("task-10", adhocDevices.Get(0), true);             // nodo 10 -> netDevice wifi 
+    NodeContainer routers;
+    routers.Add(nodes.Get(2));
+    routers.Add(nodes.Get(4));
+    routers.Add(nodes.Get(5));
+    routers.Add(nodes.Get(10));
+    
+    if(tracing) {
+      pointToPoint.EnablePcap("task", routers, true);
+      csma.EnablePcap("task", routers, true);
+      phy.SetPcapDataLinkType(WifiPhyHelper::DLT_IEEE802_11_RADIO);
+      phy.EnablePcap("task", routers, true);
     }
+    
 
     Simulator::Stop(Seconds(STOP_TIME));
     Simulator::Run();
