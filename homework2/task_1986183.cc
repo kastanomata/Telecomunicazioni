@@ -1,5 +1,7 @@
 #include "task_1986183.h"
 
+NS_LOG_COMPONENT_DEFINE("Task_1986183");
+
 int main(int argc, char* argv[]) {
     checkArgs(argc, argv); 
     // Come scelta progettuale abbiamo deciso di creare:

@@ -25,8 +25,6 @@ std::string matricolaInserita = "";
 bool enableRtsCts = false;
 bool tracing = false;
 
-NS_LOG_COMPONENT_DEFINE("Task_1986183");
-
 // Controlla gli argomenti passati alla simulazione e setta le flag correttamente
 void checkArgs(int argc, char * argv[]) {
     
