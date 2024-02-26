@@ -21,7 +21,7 @@ RUN mkdir -p /workspace
 # This can be Rome, your preference
 ENV TZ=America/New_York
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-RUN apt-get update && apt-get install -y wget build-essential git cmake libsctp-dev autoconf automake libtool bison flex libboost-all-dev tmux g++ python3 curl ninja-build openssh-server htop nano valgrind gdb
+RUN apt-get update && apt-get install -y wget build-essential wireshark git cmake libsctp-dev autoconf automake libtool bison flex libboost-all-dev tmux g++ python3 curl ninja-build openssh-server htop nano valgrind gdb
 
 WORKDIR /workspace
 
